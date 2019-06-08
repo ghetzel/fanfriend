@@ -1,5 +1,5 @@
 SKETCH     ?= fanfriend.ino
-PORT       ?= /dev/ttyACM0
+PORT       ?= /dev/ttyACM*
 PROGRAMMER ?= USBtinyISP
 ARDUINODIR ?= ~/lib/arduino-1.8.9
 ARDUINOCMD ?= arduino
@@ -15,21 +15,20 @@ $(IHEX): $(SKETCH)
 #	Build the .ino into a big pile of Arduino, producting a
 #	bootloader+payload Intel Hex (.hex) file that avrdude can upload.
 	$(ARDUINODIR)/$(ARDUINOCMD) \
-		--verbose \
 		--board adafruit:avr:adafruit32u4 \
-		--port "$(PORT)" \
 		--pref build.path="$(BUILDDIR)" \
-		--useprogrammer $(PROGRAMMER) \
 		--verify "$(SKETCH)"
+
+build: $(IHEX)
 
 upload: $(IHEX)
 	@echo "Waiting for $(PORT)..."
-	@for i in $(shell seq $(POLLITER)); do test -c "$(PORT)" && break || sleep $(POLLDELAY); done
-	@test -c "$(PORT)"
-	avrdude -p m32u4 -P "$(PORT)" -c avr109 -U "flash:w:$(IHEX)"
+	@for i in $(shell seq $(POLLITER)); do test -c $(PORT) && break || sleep $(POLLDELAY); done
+	@test -c $(PORT)
+	avrdude -p m32u4 -P $(PORT) -c avr109 -U "flash:w:$(IHEX)"
 
 erase:
 	@echo "Waiting for $(PORT)..."
-	@for i in $(shell seq $(POLLITER)); do test -c "$(PORT)" && break || sleep $(POLLDELAY); done
+	@for i in $(shell seq $(POLLITER)); do test -c $(PORT) && break || sleep $(POLLDELAY); done
 	@test -c "$(PORT)"
-	avrdude -p m32u4 -P "$(PORT)" -c avr109 -e
+	avrdude -p m32u4 -P $(PORT) -c avr109 -e
