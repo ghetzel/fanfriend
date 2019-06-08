@@ -29,3 +29,10 @@ This code is specific to this Adafruit ATMega32, but adapting it to other Atmel 
 ### BONUS LEARNING OPPORTUNITY FOR THE CURIOUS OR STUBBORN
 
 This project is ALSO structured to build and deploy entirely via the command line using the included Makefile.  This is my preferred mode of working because when I build code I want to see the whites of my compiler's eyes.  If you, too, are interested in what happens when you click 'Upload' in the Arduino IDE, then take a gander.
+
+## Indirect Thanks Totally Becoming of an Internet Millenial
+
+- https://github.com/Max-Sum/HP-fan-proxy
+- https://old.reddit.com/r/homelab/comments/6xfscd/making_the_dl380_g7_quiet_for_good/
+- https://old.reddit.com/r/homelab/comments/7vxo5n/hp_dl380e_g8_arduino_fan_control_project/
+- https://old.reddit.com/r/homelab/comments/72k3jf/faking_the_fan_signal_on_a_dl380_g7/
