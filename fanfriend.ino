@@ -1,52 +1,93 @@
-#define MAX_FANS          6   // Number of fans to allocate
-#define START_DUTY_FACTOR 1.0 // How fast the fans should spin on MCL startup (0.0 <= n <= 1.0)
+#include <Arduino.h>
+#include "config.h"
 
-static float FanDutyFactors[MAX_FANS] = {};
+struct fanReport {
+  int Index;
+  int CurrentSpeed;
+  int SystemRequestedSpeed;
+};
+
+static struct fanReport Reports[MAX_FANS];
+static int FanCurrentDutyCycle[MAX_FANS] = {};
+static int FanSystemDutyCycle[MAX_FANS] = {};
+
+// Pin I/O Mappings
+//  This is where the fan INPUTS (signal read from the motherboard declaring what the HP firmware
+//  *wants* the speed to be) are setup, as well as the fan OUTPUTS (what we tell the fans the speed
+//  *will* be.)
+// -------------------------------------------------------------------------------------------------
+static int FanInputPins[MAX_FANS] = {
+  0,  // Arduino Analog In 0    (ATMega32U4 F7)
+  1,  // Arduino Analog In 1    (ATMega32U4 F6)
+  2,  // Arduino Analog In 2    (ATMega32U4 F5)
+  3,  // Arduino Analog In 3    (ATMega32U4 F4)
+  4,  // Arduino Analog In 4    (ATMega32U4 F1)
+  5,  // Arduino Analog In 5    (ATMega32U4 F0)
+};
+
+static int FanOutputPins[MAX_FANS] = {
+  3,  // Arduino Digital Pin 3  (ATMega32U4 D0)
+  2,  // Arduino Digital Pin 2  (ATMega32U4 D1)
+  0,  // Arduino Digital Pin 0  (ATMega32U4 D2)
+  1,  // Arduino Digital Pin 1  (ATMega32U4 D3)
+  4,  // Arduino Digital Pin 4  (ATMega32U4 D4)
+  12, // Arduino Digital Pin 12 (ATMega32U4 D6)
+};
 
 // Change the duty cycle on the numbered fan. Clamps the duty factor
-// to [0.0, 1.0] and validates the fan index.  Will return 0 on success
+// to [0, 255] and validates the fan index.  Will return 0 on success
 // and n<0 on failure.
-int setFanDuty(int fan, float dutyFactor) {
+int SetFanDuty(int fan, float dutyFactor) {
   if (fan < 0 || fan > MAX_FANS) {
     return -1;
   } else if (dutyFactor < 0) {
     dutyFactor = 0;
-  } else if (dutyFactor > 1) {
-    dutyFactor = 1;
+  } else if (dutyFactor > 255) {
+    dutyFactor = 255;
+  } else if (FanCurrentDutyCycle[fan] == dutyFactor) {
+    return 0;
   }
 
-  FanDutyFactors[fan] = dutyFactor;
+  FanCurrentDutyCycle[fan] = dutyFactor;
   return 0;
 }
 
-void setup() {
-  // Set initial state
-  // -----------------------------------------------------------------------------------------------
+void RefreshReports() {
   for(int i = 0; i < MAX_FANS; i++) {
-    FanDutyFactors[i] = START_DUTY_FACTOR;
+    Reports[i].Index = i;
+    Reports[i].CurrentSpeed = FanCurrentDutyCycle[i];
+    Reports[i].SystemRequestedSpeed = FanSystemDutyCycle[i];
+  }
+}
+
+void setup() {
+  // Set initial fan states
+  for(int i = 0; i < MAX_FANS; i++) {
+    SetFanDuty(1, INIT_FAN_SPEED);
+    pinMode(FanOutputPins[i], OUTPUT);
+
+    // initialize the "what the motherboard wants us to do" array
+    FanSystemDutyCycle[i] = 0;
   }
 
+  RefreshReports();
+
   // Setup pins
-  // -----------------------------------------------------------------------------------------------
-  pinMode(7, OUTPUT); // green BOOT LED
+  pinMode(LED_PIN, OUTPUT); // green BOOT LED
+
+  Serial1.begin(9600);
 }
 
 void loop() {
   for(int i = 0; i < MAX_FANS; i++) {
-    for(int j = 0; j < (i+1); j++) {
-      digitalWrite(7, HIGH);
-      delay(100);
-      digitalWrite(7, LOW);
-      delay(100);
-    }
-
-    delay(2000);
-
-    float factor = FanDutyFactors[i];
-
-    digitalWrite(7, HIGH);
-    delay(1000 * factor);
-    digitalWrite(7, LOW);
-    delay(1000 * factor);
+    analogWrite(FanOutputPins[i], 255 * FanCurrentDutyCycle[i]);
   }
+
+  digitalWrite(LED_PIN, HIGH);
+  delay(250);
+  digitalWrite(LED_PIN, LOW);
+  delay(250);
+
+  Serial1.println("Hello World...");
+  Serial1.flush();
 }
