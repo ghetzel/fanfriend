@@ -1,2 +1,11 @@
 /build
+/obj
 /.vscode
+*.map
+*.o
+*.hex
+*.sym
+*.eep
+*.elf
+*.lss
+*.bin
