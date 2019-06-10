@@ -1,16 +1,26 @@
-SKETCH     ?= fanfriend.ino
-PORT       ?= /dev/ttyACM0
-PROGRAMMER ?= USBtinyISP
-ARDUINODIR ?= ~/lib/arduino-1.8.9
-ARDUINOCMD ?= arduino
+# Board Configuration
+# --------------------------------------------------------------------------------------------------
+# If you dont have this: https://www.adafruit.com/product/296, you're probably
+# changing these values.
+#
+BOARD      ?= LEONARDO
+MCU        ?= atmega32u4
+F_CPU      ?= 16000000
+F_USB      ?= $(F_CPU)
+# --------------------------------------------------------------------------------------------------
+
+CC         ?= avr-gcc
+CC_FLAGS   += -DUSE_LUFA_CONFIG_HEADER -IConfig/
+CPP_FLAGS  +=
+SRC        += $(wildcard *.c)
+SRC        += $(wildcard *.h)
+SRC        += $(wildcard *.cpp)
+
 POLLITER   ?= 240
 BUILDDIR   ?= $(PWD)/build
 POLLDELAY  := 0.125
 IHEX       ?= build/$(SKETCH).with_bootloader.hex
 FILES      += $(SKETCH)
-FILES      += $(wildcard *.c)
-FILES      += $(wildcard *.h)
-FILES      += $(wildcard *.cpp)
 
 all: $(IHEX) upload
 
@@ -19,8 +29,6 @@ clean:
 
 $(IHEX): $(FILES)
 	@test -d "$(BUILDDIR)" || mkdir -p "$(BUILDDIR)"
-#	Build the .ino into a big pile of Arduino, producting a
-#	bootloader+payload Intel Hex (.hex) file that avrdude can upload.
 	$(ARDUINODIR)/$(ARDUINOCMD) \
 		--board adafruit:avr:adafruit32u4 \
 		--pref build.path="$(BUILDDIR)" \
