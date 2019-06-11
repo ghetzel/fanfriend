@@ -19,13 +19,28 @@ SRC        += $(wildcard *.cpp)
 SRC        += $(LUFA_SRC_USB)
 SRC        += $(LUFA_SRC_USBCLASS)
 
+LIBS       += $(wildcard lib/*)
+
 LUFA_PATH  = $(PWD)/lib/LUFA
+LUFA_URL   ?= https://github.com/abcminiuser/lufa.git
+LUFA_REF   ?= 5ba628d10b54d58d445896290ba9799bd76a73b3
 POLLITER   ?= 240
 BUILDDIR   ?= build
 TARGET     ?= $(BUILDDIR)/fanfriend
 POLLDELAY  := 0.125
 
 all:
+
+update-libs:
+	@-rm -rf vcs
+	@test -d vcs || mkdir vcs
+	@echo "  [GIT]\tCloning LUFA ($(LUFA_URL))..."
+	@git clone --quiet $(LUFA_URL) vcs/lufa
+	@echo "  [REF]\tUsing LUFA revision $(LUFA_REF)..."
+	@cd vcs/lufa && git checkout --quiet $(LUFA_REF)
+	@echo "  [CP]\tCopying LUFA to vendor directory..."
+	@rsync -a --delete-after vcs/lufa/LUFA/ lib/LUFA/
+	@rm -rf vcs
 
 # $(LUFA_PATH):
 # 	test -d "$(dir $(LUFA_PATH))" || mkdir -p "$(dir $(LUFA_PATH))"
