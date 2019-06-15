@@ -16,26 +16,30 @@ char CliArgs[MAX_NUM_ARGS][ARG_BUF_SIZE];
 int CmdHelp();
 int CmdSet();
 int CmdGet();
+int CmdMonitor();
 
 // List of functions pointers corresponding to each command
 int (*CliCmdFuncs[])(){
     &CmdHelp,
     &CmdSet,
-    &CmdGet
+    &CmdGet,
+    &CmdMonitor,
 };
 
 // List of command names
 const char *CliCmdStrings[] = {
     "help",
     "set",
-    "get"
+    "get",
+    "monitor",
 };
 
 // command usage summaries
 const char *CliCmdHelp[] = {
     "            Show this help text.",
     " FANID PERC  Specify the percent speed for the given fan FANID, or -1 for all fans.",
-    " [FANID]     Report on the current state of one or all fans."
+    " [FANID]     Report on the current state of one or all fans.",
+    "            Periodically report on the current fan states.",
 };
 
 const int CliNumCommands = sizeof(CliCmdStrings) / sizeof(char *);
@@ -203,4 +207,8 @@ int CmdGet() {
       writeFan(i);
     }
   }
+}
+
+int CmdMonitor() {
+  MonitorMode = !MonitorMode;
 }

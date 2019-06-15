@@ -94,11 +94,16 @@ int UnpinFan(int fan) {
 void UpdatePWM() {
   for(int i = 0; i < MAX_FANS; i++) {
     UpdateFanPinning(i);
-    analogWrite(FanOutputPins[i], FanCurrentDutyCycle[i]);
+    analogWrite(FanOutputPins[i], (int)(PWM_UPPER) - FanCurrentDutyCycle[i]);
   }
 }
 
 void setup() {
+  TCCR0B = _BV(CS00);
+  TCCR1B = _BV(CS00);
+  // TCCR2B = _BV(CS00);
+  TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM00);
+
   // Set initial fan states
   for(int i = 0; i < MAX_FANS; i++) {
     pinMode(FanOutputPins[i], OUTPUT);
@@ -116,6 +121,9 @@ void setup() {
   pinMode(LED_PIN, OUTPUT); // green BOOT LED
   digitalWrite(LED_PIN, HIGH);
 
+  // update time
+  Uptime = millis();
+
   Serial.begin(SERIAL_BAUD);
   CliInit();
 }
@@ -124,6 +132,9 @@ void loop() {
   // this is used to simulate the system input PWM changing by having it
   // move up and down over time.
   // debugSystemSimIterate();
+
+  // update time
+  Uptime = millis();
 
   UpdatePWM();
   digitalWrite(LED_PIN, HIGH);
@@ -139,4 +150,14 @@ void loop() {
 
     CliReset();
   }
+
+  if (MonitorMode && (Uptime - LastMonitorEmit) > MONITOR_INTV_MS) {
+    for(int i = 0; i < MAX_FANS; i++) {
+      writeFan(i);
+    }
+
+    LastMonitorEmit = Uptime;
+  }
+
+  Serial.flush();
 }

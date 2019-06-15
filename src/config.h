@@ -11,12 +11,16 @@
 #define MAX_NUM_ARGS        16
 #define ARG_BUF_SIZE        16
 #define PWM_UPPER           (float)(255)
-#define SERIAL_BAUD         9600
+#define SERIAL_BAUD         115200
+#define MONITOR_INTV_MS     1000
 
 #define ERR_SETFAN_OKAY     0
 #define ERR_SETFAN_BAD      -1
 #define ERR_SETFAN_PINNED   -2
 
+static unsigned long Uptime = 0;
+static unsigned long LastMonitorEmit = 0;
+static bool MonitorMode = false;
 static int FanCurrentDutyCycle[MAX_FANS] = {};
 static int FanMinimum[MAX_FANS] = {};
 static int FanMaximum[MAX_FANS] = {};
