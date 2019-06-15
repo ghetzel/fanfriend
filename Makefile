@@ -1,39 +1,44 @@
 # Board Configuration
 # --------------------------------------------------------------------------------------------------
-# If you dont have this: https://www.adafruit.com/product/296, you're probably
-# changing these values.
-#
+LUFA       ?= false
+ROOT        = $(PWD)
+PORT       ?= /dev/ttyACM0
+
+ifeq ($(LUFA),true)
+# --------------------------------------------------------------------------------------------------
+# LUFA + avr-gcc toolchain config
+# --------------------------------------------------------------------------------------------------
 ARCH       ?= AVR8
 BOARD      ?= ADAFRUITU4
 MCU        ?= atmega32u4
 F_CPU      ?= 16000000
 F_USB      ?= $(F_CPU)
-# --------------------------------------------------------------------------------------------------
-LUFA       ?= false
-ROOT        = $(PWD)
-PORT       ?= /dev/ttyACM0
+CC         ?= avr-gcc
 CC_FLAGS   += -DUSE_LUFA_CONFIG_HEADER -Isrc
 CPP_FLAGS  +=
-
-ifeq ($(LUFA),true)
-CC         ?= avr-gcc
 SRC        += $(wildcard src/*.c)
 SRC        += $(wildcard src/*.cpp)
 SRC        += $(LUFA_SRC_USB)
 SRC        += $(LUFA_SRC_USBCLASS)
+LIBS       += $(wildcard lib/*)
+LUFA_PATH   = lib/LUFA
+LUFA_URL   ?= https://github.com/abcminiuser/lufa.git
+LUFA_REF   ?= 5ba628d10b54d58d445896290ba9799bd76a73b3
+TARGET     ?= $(ROOT)/$(BUILDDIR)/fanfriend
 else
+# --------------------------------------------------------------------------------------------------
+# Arduino toolchain config
+# --------------------------------------------------------------------------------------------------
 SRC        += $(wildcard src/*.ino)
 IHEX       ?= $(ROOT)/build/$(notdir $(SRC)).adafruit.avr.adafruit32u4.hex
 TARGET     := $(IHEX)
+BOARD      ?= adafruit:avr:adafruit32u4
+USB_MFG    ?= garydotcool
+USB_PROD   ?= FanFriend USB Fan Controller
 endif
 
-LIBS       += $(wildcard lib/*)
-LUFA_PATH  = lib/LUFA
-LUFA_URL   ?= https://github.com/abcminiuser/lufa.git
-LUFA_REF   ?= 5ba628d10b54d58d445896290ba9799bd76a73b3
 POLLITER   ?= 240
 BUILDDIR   ?= $(ROOT)/build
-TARGET     ?= $(ROOT)/$(BUILDDIR)/fanfriend
 POLLDELAY  := 0.125
 
 all: arduino
@@ -41,15 +46,19 @@ all: arduino
 clean:
 	-rm -rf build obj
 
+ifneq ($(LUFA),true)
 arduino: $(IHEX)
 
 $(IHEX): $(SRC) $(wildcard src/*.h)
 	@test -d "$(BUILDDIR)" || mkdir -p "$(BUILDDIR)"
 	cd src && arduino-cli compile \
-		--fqbn adafruit:avr:adafruit32u4 \
+		--fqbn $(BOARD) \
 		--build-path "$(BUILDDIR)" \
+		--build-properties build.usb_manufacturer="$(USB_MFG)" \
+		--build-properties build.usb_product="$(USB_PROD)" \
 		$(notdir $(SRC))
 	mv src/*.hex src/*.elf $(BUILDDIR)/
+endif
 
 ifeq ($(LUFA),true)
 update-libs:

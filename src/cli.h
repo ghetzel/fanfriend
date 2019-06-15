@@ -34,7 +34,7 @@ const char *CliCmdStrings[] = {
 // command usage summaries
 const char *CliCmdHelp[] = {
     "            Show this help text.",
-    " FANID DUTY  Specify the duty cycle for the given fan FANID, or -1 for all fans.",
+    " FANID PERC  Specify the percent speed for the given fan FANID, or -1 for all fans.",
     " [FANID]     Report on the current state of one or all fans."
 };
 
@@ -42,8 +42,8 @@ const int CliNumCommands = sizeof(CliCmdStrings) / sizeof(char *);
 const char *CliEolDelimiters = ", \n";
 
 void CliInit() {
+  CmdHelp();
   Serial.println("OK " + String(VERSION));
-  Serial.print("> ");
 }
 
 bool CliReadLine(char *line) {
@@ -95,7 +95,6 @@ void CmdErr(char *msg) {
 void CliReset() {
   memset(CliLine, 0, CLI_MAX_LINE);
   memset(CliArgs, 0, sizeof(CliArgs[0][0]) * MAX_NUM_ARGS * ARG_BUF_SIZE);
-  Serial.print("> ");
 }
 
 int CliExec(char *l) {
@@ -147,19 +146,46 @@ int CmdHelp() {
 
 int CmdSet() {
   int fan = String(CliArgs[1]).toInt();
-  int duty = String(CliArgs[2]).toInt();
+  double pin = 0;
+  double pct = 0;
+  int duty = INIT_FAN_SPEED;
+  String a2 = String(CliArgs[2]);
 
-  if (duty <= 0 || duty >= 256) {
+  if (a2 == "pin") {
+    pin = String(CliArgs[3]).toDouble();
+  } else {
+    pct = a2.toDouble();
+  }
+
+
+  if (pct < 0) {
     duty = INIT_FAN_SPEED;
-    CmdWarn("Duty value out of bounds, using default");
+  } else if (pct == 0) {
+    duty = 0;
+  } else if (pct >= 100) {
+    duty = PWM_UPPER;
+  } else {
+    duty = (int)( ((pct / 100.0) + 0.005) * PWM_UPPER);
   }
 
   if (fan > 0 && fan <= MAX_FANS) {
-    FanCurrentDutyCycle[fan-1] = duty;
+    if (pin > 0) {
+      PinFan(fan-1, pin);
+    } else {
+      UnpinFan(fan-1);
+      SetFanDuty(fan-1, duty);
+    }
+
     writeFan(fan-1);
   } else if (fan < 0) {
     for(int i = 0; i < MAX_FANS; i++) {
-      FanCurrentDutyCycle[i] = duty;
+      if (pin > 0) {
+        PinFan(i, pin);
+      } else {
+        UnpinFan(i);
+        SetFanDuty(i, duty);
+      }
+
       writeFan(i);
     }
   } else {
