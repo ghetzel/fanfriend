@@ -67,7 +67,7 @@ void setup() {
 
 void loop() {
   for(int i = 0; i < MAX_FANS; i++) {
-    analogWrite(FanOutputPins[i], 255 * FanCurrentDutyCycle[i]);
+    analogWrite(FanOutputPins[i], FanCurrentDutyCycle[i]);
   }
 
   if (CliReadLine(CliLine)) {
