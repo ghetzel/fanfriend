@@ -31,10 +31,6 @@ static int FanOutputPins[MAX_FANS] = {
 int SetFanDuty(int fan, float pwm) {
   if (fan < 0 || fan > MAX_FANS) {
     return ERR_SETFAN_BAD;
-  } else if (pwm < 0) {
-    pwm = 0;
-  } else if (pwm > 255) {
-    pwm = 255;
   }
 
   // if a pin factor is present, use it instead
@@ -42,7 +38,7 @@ int SetFanDuty(int fan, float pwm) {
     return ERR_SETFAN_PINNED;
   }
 
-  FanCurrentDutyCycle[fan] = pwm;
+  FanCurrentDutyCycle[fan] = clamp(fan, pwm);
   return ERR_SETFAN_OKAY;
 }
 
@@ -50,10 +46,9 @@ int SetFanDuty(int fan, float pwm) {
 bool UpdateFanPinning(int fan) {
   if (
     FanSystemPinningFactors[fan] > 0 &&
-    FanSystemPinningFactors[fan] <= 1 &&
     FanSystemDutyCycle[fan] > 0
   ) {
-    FanCurrentDutyCycle[fan] = (int)(FanSystemDutyCycle[fan] * FanSystemPinningFactors[fan]);
+    FanCurrentDutyCycle[fan] = clamp(fan, (int)(FanSystemDutyCycle[fan] * FanSystemPinningFactors[fan]));
     return true;
   } else {
     return false;
@@ -85,7 +80,8 @@ int UnpinFan(int fan) {
   }
 
   FanSystemPinningFactors[fan] = 0;
-  FanCurrentDutyCycle[fan] = INIT_FAN_SPEED;
+  FanCurrentDutyCycle[fan] = clamp(fan, INIT_FAN_SPEED);
+
   UpdateFanPinning(fan);
 
   return ERR_SETFAN_OKAY;
@@ -94,6 +90,9 @@ int UnpinFan(int fan) {
 void UpdatePWM() {
   for(int i = 0; i < MAX_FANS; i++) {
     UpdateFanPinning(i);
+
+    // subtract from max pwm to produce an inverted PWM
+    // (I'm gonna call this a "suppression wave")
     analogWrite(FanOutputPins[i], (int)(PWM_UPPER) - FanCurrentDutyCycle[i]);
   }
 }
@@ -101,11 +100,14 @@ void UpdatePWM() {
 void setup() {
   TCCR0B = _BV(CS00);
   TCCR1B = _BV(CS00);
-  // TCCR2B = _BV(CS00);
   TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM00);
 
   // Set initial fan states
   for(int i = 0; i < MAX_FANS; i++) {
+    // set default initial bounds
+    FanBounds[i][0] = DEFAULT_FAN_MIN_DC;
+    FanBounds[i][1] = DEFAULT_FAN_MAX_DC;
+
     pinMode(FanOutputPins[i], OUTPUT);
     SetFanDuty(i, INIT_FAN_SPEED);
 
@@ -122,7 +124,7 @@ void setup() {
   digitalWrite(LED_PIN, HIGH);
 
   // update time
-  Uptime = millis();
+  // Uptime = millis();
 
   Serial.begin(SERIAL_BAUD);
   CliInit();
@@ -134,7 +136,7 @@ void loop() {
   // debugSystemSimIterate();
 
   // update time
-  Uptime = millis();
+  // Uptime = millis();
 
   UpdatePWM();
   digitalWrite(LED_PIN, HIGH);
@@ -151,13 +153,13 @@ void loop() {
     CliReset();
   }
 
-  if (MonitorMode && (Uptime - LastMonitorEmit) > MONITOR_INTV_MS) {
-    for(int i = 0; i < MAX_FANS; i++) {
-      writeFan(i);
-    }
+  // if (MonitorMode && (Uptime - LastMonitorEmit) > MONITOR_INTV_MS) {
+  //   for(int i = 0; i < MAX_FANS; i++) {
+  //     writeFan(i);
+  //   }
 
-    LastMonitorEmit = Uptime;
-  }
+  //   LastMonitorEmit = Uptime;
+  // }
 
   Serial.flush();
 }

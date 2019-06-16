@@ -10,9 +10,11 @@
 #define CLI_MAX_LINE        256
 #define MAX_NUM_ARGS        16
 #define ARG_BUF_SIZE        16
-#define PWM_UPPER           (float)(255)
+#define PWM_UPPER           255
 #define SERIAL_BAUD         115200
 #define MONITOR_INTV_MS     1000
+#define DEFAULT_FAN_MIN_DC  15
+#define DEFAULT_FAN_MAX_DC  255
 
 #define ERR_SETFAN_OKAY     0
 #define ERR_SETFAN_BAD      -1
@@ -22,8 +24,7 @@ static unsigned long Uptime = 0;
 static unsigned long LastMonitorEmit = 0;
 static bool MonitorMode = false;
 static int FanCurrentDutyCycle[MAX_FANS] = {};
-static int FanMinimum[MAX_FANS] = {};
-static int FanMaximum[MAX_FANS] = {};
+static int FanBounds[MAX_FANS][2] = {};
 static int FanSystemDutyCycle[MAX_FANS] = {};
 static float FanSystemPinningFactors[MAX_FANS] = {};
 
@@ -33,12 +34,8 @@ int UnpinFan(int fan);
 
 // Clamps a proposed fan PWM duty cycle [0,255] to the configured min/max bounds.
 int clamp(int fan, int pwm) {
-  if (fan < 0 || fan >= MAX_FANS) {
-    return;
-  }
-
-  int min = FanMinimum[fan];
-  int max = FanMinimum[fan];
+  int min = FanBounds[fan][0];
+  int max = FanBounds[fan][1];
 
   if (pwm > max) {
     pwm = max;
@@ -63,8 +60,8 @@ void writeFan(int i) {
 
   Serial.println(
     "FAN " + String(i+1, DEC) +
-    " ACTUAL " + String((int)((FanCurrentDutyCycle[i]/PWM_UPPER)*100.0), DEC) +
-    " SYSTEM " + String((int)((FanSystemDutyCycle[i]/PWM_UPPER)*100.0), DEC) +
+    " ACTUAL " + String(FanCurrentDutyCycle[i], DEC) +
+    " SYSTEM " + String(FanSystemDutyCycle[i], DEC) +
     suffix
   );
 }

@@ -37,7 +37,7 @@ const char *CliCmdStrings[] = {
 // command usage summaries
 const char *CliCmdHelp[] = {
     "            Show this help text.",
-    " FANID PERC  Specify the percent speed for the given fan FANID, or -1 for all fans.",
+    " FANID DUTY  Specify the duty cycle [0, 255] for the given fan FANID, or -1 for all fans.",
     " [FANID]     Report on the current state of one or all fans.",
     "            Periodically report on the current fan states.",
 };
@@ -71,7 +71,7 @@ bool CliReadLine(char *line) {
       case BS:
         if (charsRead > 0) {
           line[--charsRead] = NUL;
-          Serial << byte(SPACE) << byte(BS);
+          Serial << byte(BS) << byte(SPACE) << byte(BS);
         }
 
         break;
@@ -150,41 +150,36 @@ int CmdHelp() {
 
 int CmdSet() {
   int fan = String(CliArgs[1]).toInt();
-  double pin = 0;
-  double pct = 0;
+  int idx = fan - 1;
   int duty = INIT_FAN_SPEED;
+  double pinFactor = 0;
+
   String a2 = String(CliArgs[2]);
 
   if (a2 == "pin") {
-    pin = String(CliArgs[3]).toDouble();
+    pinFactor = String(CliArgs[3]).toDouble();
   } else {
-    pct = a2.toDouble();
+    duty = a2.toInt();
   }
 
 
-  if (pct < 0) {
+  if (duty < 0) {
     duty = INIT_FAN_SPEED;
-  } else if (pct == 0) {
-    duty = 0;
-  } else if (pct >= 100) {
-    duty = PWM_UPPER;
-  } else {
-    duty = (int)( ((pct / 100.0) + 0.005) * PWM_UPPER);
   }
 
   if (fan > 0 && fan <= MAX_FANS) {
-    if (pin > 0) {
-      PinFan(fan-1, pin);
+    if (pinFactor > 0) {
+      PinFan(idx, pinFactor);
     } else {
-      UnpinFan(fan-1);
-      SetFanDuty(fan-1, duty);
+      UnpinFan(idx);
+      SetFanDuty(idx, duty);
     }
 
-    writeFan(fan-1);
+    writeFan(idx);
   } else if (fan < 0) {
     for(int i = 0; i < MAX_FANS; i++) {
-      if (pin > 0) {
-        PinFan(i, pin);
+      if (pinFactor > 0) {
+        PinFan(i, pinFactor);
       } else {
         UnpinFan(i);
         SetFanDuty(i, duty);
