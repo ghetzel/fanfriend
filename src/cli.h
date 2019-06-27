@@ -1,7 +1,10 @@
 #include <Arduino.h>
 #include <string.h>
 #include <stdlib.h>
-#include "config.h"
+
+#define CLI_MAX_LINE        256
+#define MAX_NUM_ARGS        16
+#define ARG_BUF_SIZE        16
 
 #define CR     '\r'
 #define LF     '\n'
@@ -175,7 +178,7 @@ int CmdSet() {
       SetFanDuty(idx, duty);
     }
 
-    writeFan(idx);
+    printFan(idx);
   } else if (fan < 0) {
     for(int i = 0; i < MAX_FANS; i++) {
       if (pinFactor > 0) {
@@ -185,7 +188,7 @@ int CmdSet() {
         SetFanDuty(i, duty);
       }
 
-      writeFan(i);
+      printFan(i);
     }
   } else {
     CmdErr("Invalid FAN ID");
@@ -196,10 +199,10 @@ int CmdSet() {
 int CmdGet() {
   if (String(CliArgs[1]).length()) {
     int fan = String(CliArgs[1]).toInt();
-    writeFan(fan-1);
+    printFan(fan-1);
   } else {
     for(int i = 0; i < MAX_FANS; i++) {
-      writeFan(i);
+      printFan(i);
     }
   }
 }

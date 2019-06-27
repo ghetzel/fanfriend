@@ -5,11 +5,8 @@
 #define USB_VENDOR          0x03EB
 #define USB_PRODUCT         0x204F
 #define MAX_FANS            6                 // Number of fans to allocate
-#define INIT_FAN_SPEED      64                // How fast the fans should spin on MCL startup (0 <= n <= 255)
+#define INIT_FAN_SPEED      128               // How fast the fans should spin on MCL startup (0 <= n <= 255)
 #define LED_PIN             7
-#define CLI_MAX_LINE        256
-#define MAX_NUM_ARGS        16
-#define ARG_BUF_SIZE        16
 #define PWM_UPPER           255
 #define SERIAL_BAUD         115200
 #define MONITOR_INTV_MS     1000
@@ -23,19 +20,19 @@
 static unsigned long Uptime = 0;
 static unsigned long LastMonitorEmit = 0;
 static bool MonitorMode = false;
-static int FanCurrentDutyCycle[MAX_FANS] = {};
-static int FanBounds[MAX_FANS][2] = {};
-static int FanSystemDutyCycle[MAX_FANS] = {};
+static uint8_t FanCurrentDutyCycle[MAX_FANS] = {};
+static uint8_t FanBounds[MAX_FANS][2] = {};
+static uint8_t FanSystemDutyCycle[MAX_FANS] = {};
 static float FanSystemPinningFactors[MAX_FANS] = {};
 
-int SetFanDuty(int fan, float range);
+int SetFanDuty(int fan, uint8_t range);
 int PinFan(int fan, float factor);
 int UnpinFan(int fan);
 
 // Clamps a proposed fan PWM duty cycle [0,255] to the configured min/max bounds.
-int clamp(int fan, int pwm) {
-  int min = FanBounds[fan][0];
-  int max = FanBounds[fan][1];
+uint8_t clamp(int fan, uint8_t pwm) {
+  uint8_t min = FanBounds[fan][0];
+  uint8_t max = FanBounds[fan][1];
 
   if (pwm > max) {
     pwm = max;
@@ -46,7 +43,7 @@ int clamp(int fan, int pwm) {
   return pwm;
 }
 
-void writeFan(int i) {
+void printFan(int i) {
   if (i < 0 || i >= MAX_FANS) {
     return;
   }

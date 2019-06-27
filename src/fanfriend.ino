@@ -16,19 +16,21 @@ static int FanInputPins[MAX_FANS] = {
   5,  // Arduino Analog In 5    (ATMega32U4 F0)
 };
 
+
+// PWM: (Arduino) Pins 3 (D0), 5 (C6), 6 (D7), 9 (B5), 10 (B6), 11 (B7), and 13 (C7) provide 8-bit PWM output
 static int FanOutputPins[MAX_FANS] = {
-  3,  // Arduino Digital Pin 3  (ATMega32U4 D0)
-  2,  // Arduino Digital Pin 2  (ATMega32U4 D1)
-  0,  // Arduino Digital Pin 0  (ATMega32U4 D2)
-  1,  // Arduino Digital Pin 1  (ATMega32U4 D3)
-  4,  // Arduino Digital Pin 4  (ATMega32U4 D4)
-  12, // Arduino Digital Pin 12 (ATMega32U4 D6)
+  13, // Arduino Digital Pin 3  (ATMega32U4 C7)
+  5,  // Arduino Digital Pin 2  (ATMega32U4 C6)
+  11, // Arduino Digital Pin 0  (ATMega32U4 B7)
+  10, // Arduino Digital Pin 1  (ATMega32U4 B6)
+  9,  // Arduino Digital Pin 4  (ATMega32U4 B5)
+  3,  // Arduino Digital Pin 12 (ATMega32U4 D0)
 };
 
 // Change the duty cycle on the numbered fan. Clamps the duty factor
 // to [0, 255] and validates the fan index.  Will return 0 on success
 // and n<0 on failure.
-int SetFanDuty(int fan, float pwm) {
+int SetFanDuty(int fan, uint8_t pwm) {
   if (fan < 0 || fan > MAX_FANS) {
     return ERR_SETFAN_BAD;
   }
@@ -39,6 +41,8 @@ int SetFanDuty(int fan, float pwm) {
   }
 
   FanCurrentDutyCycle[fan] = clamp(fan, pwm);
+  UpdatePWM();
+
   return ERR_SETFAN_OKAY;
 }
 
@@ -48,7 +52,7 @@ bool UpdateFanPinning(int fan) {
     FanSystemPinningFactors[fan] > 0 &&
     FanSystemDutyCycle[fan] > 0
   ) {
-    FanCurrentDutyCycle[fan] = clamp(fan, (int)(FanSystemDutyCycle[fan] * FanSystemPinningFactors[fan]));
+    FanCurrentDutyCycle[fan] = clamp(fan, (uint8_t)(FanSystemDutyCycle[fan] * FanSystemPinningFactors[fan]));
     return true;
   } else {
     return false;
@@ -93,7 +97,7 @@ void UpdatePWM() {
 
     // subtract from max pwm to produce an inverted PWM
     // (I'm gonna call this a "suppression wave")
-    analogWrite(FanOutputPins[i], (int)(PWM_UPPER) - FanCurrentDutyCycle[i]);
+    analogWrite(FanOutputPins[i], (uint8_t)(PWM_UPPER) - FanCurrentDutyCycle[i]);
   }
 }
 
@@ -108,7 +112,6 @@ void setup() {
     FanBounds[i][0] = DEFAULT_FAN_MIN_DC;
     FanBounds[i][1] = DEFAULT_FAN_MAX_DC;
 
-    pinMode(FanOutputPins[i], OUTPUT);
     SetFanDuty(i, INIT_FAN_SPEED);
 
     // initialize the "what the motherboard wants us to do" array
@@ -123,9 +126,6 @@ void setup() {
   pinMode(LED_PIN, OUTPUT); // green BOOT LED
   digitalWrite(LED_PIN, HIGH);
 
-  // update time
-  // Uptime = millis();
-
   Serial.begin(SERIAL_BAUD);
   CliInit();
 }
@@ -138,7 +138,6 @@ void loop() {
   // update time
   // Uptime = millis();
 
-  UpdatePWM();
   digitalWrite(LED_PIN, HIGH);
 
   if (CliReadLine(CliLine)) {
@@ -155,7 +154,7 @@ void loop() {
 
   // if (MonitorMode && (Uptime - LastMonitorEmit) > MONITOR_INTV_MS) {
   //   for(int i = 0; i < MAX_FANS; i++) {
-  //     writeFan(i);
+  //     printFan(i);
   //   }
 
   //   LastMonitorEmit = Uptime;

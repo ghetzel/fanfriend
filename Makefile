@@ -54,8 +54,6 @@ $(IHEX): $(SRC) $(wildcard src/*.h)
 	cd src && arduino-cli compile \
 		--fqbn $(BOARD) \
 		--build-path "$(BUILDDIR)" \
-		--build-properties build.usb_manufacturer="$(USB_MFG)" \
-		--build-properties build.usb_product="$(USB_PROD)" \
 		$(notdir $(SRC))
 	mv src/*.hex src/*.elf $(BUILDDIR)/
 endif
